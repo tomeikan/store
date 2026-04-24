@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>公告管理</title>
+  <link rel="stylesheet" href="../style.css" />
+</head>
+<body style="background:#f5f5f0;">
+  <nav class="admin-nav">
+    <span style="color:white;font-size:16px;font-weight:700;margin-right:24px;">🛍 後台管理</span>
+    <a href="index.html">總覽</a>
+    <a href="products.html">商品管理</a>
+    <a href="orders.html">訂單管理</a>
+    <a href="notices.html" class="active">公告管理</a>
+    <a href="users.html">會員管理</a>
+  </nav>
+  <div class="admin-container">
+    <h1 class="admin-title">公告管理</h1>
+    <button class="btn-add" onclick="openForm()">+ 新增公告</button>
+    <table class="data-table">
+      <thead><tr><th>標籤</th><th>標題</th><th>發布時間</th><th>操作</th></tr></thead>
+      <tbody id="notices-tbody"></tbody>
+    </table>
+  </div>
+
+  <div id="form-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:16px;padding:24px;width:90%;max-width:480px;">
+      <h3 style="margin-bottom:20px;" id="form-title">新增公告</h3>
+      <input type="hidden" id="f-id" />
+      <div class="form-group"><label>類型標籤</label>
+        <select id="f-tag">
+          <option value="new">新品上架</option>
+          <option value="sale">促銷活動</option>
+          <option value="info">重要通知</option>
+        </select>
+      </div>
+      <div class="form-group"><label>公告標題</label><input id="f-title" /></div>
+      <div class="form-group"><label>公告內容</label><textarea id="f-content"></textarea></div>
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button class="btn-add" onclick="saveNotice()" style="flex:1;margin:0;">儲存</button>
+        <button onclick="closeForm()" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:10px;background:white;cursor:pointer;">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../config.js"></script>
+  <script>
+    const token = localStorage.getItem('admin_token') || '';
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+    const tagLabels = { new: '新品上架', sale: '促銷活動', info: '重要通知' };
+    let notices = [];
+
+    async function loadNotices() {
+      const res = await fetch(`${CONFIG.API_URL}/api/admin/notices`, { headers });
+      notices = await res.json();
+      document.getElementById('notices-tbody').innerHTML = notices.map(n => `
+        <tr>
+          <td><span class="notice-tag tag-${n.tag}">${tagLabels[n.tag] || n.tag}</span></td>
+          <td>${n.title}</td>
+          <td>${new Date(n.created_at).toLocaleString('zh-TW')}</td>
+          <td>
+            <button class="btn-sm btn-edit" onclick="editNotice(${n.id})">編輯</button>
+            <button class="btn-sm btn-delete" onclick="deleteNotice(${n.id})">刪除</button>
+          </td>
+        </tr>`).join('');
+    }
+
+    function openForm(n = null) {
+      document.getElementById('form-title').textContent = n ? '編輯公告' : '新增公告';
+      document.getElementById('f-id').value = n ? n.id : '';
+      document.getElementById('f-tag').value = n ? n.tag : 'new';
+      document.getElementById('f-title').value = n ? n.title : '';
+      document.getElementById('f-content').value = n ? n.content : '';
+      document.getElementById('form-modal').style.display = 'flex';
+    }
+    function closeForm() { document.getElementById('form-modal').style.display = 'none'; }
+    function editNotice(id) { openForm(notices.find(n => n.id === id)); }
+
+    async function saveNotice() {
+      const id = document.getElementById('f-id').value;
+      const tag = document.getElementById('f-tag').value;
+      const body = {
+        tag, tag_label: tagLabels[tag],
+        title: document.getElementById('f-title').value,
+        content: document.getElementById('f-content').value,
+      };
+      const url = id ? `${CONFIG.API_URL}/api/admin/notices/${id}` : `${CONFIG.API_URL}/api/admin/notices`;
+      await fetch(url, { method: id ? 'PUT' : 'POST', headers, body: JSON.stringify(body) });
+      closeForm(); loadNotices();
+    }
+
+    async function deleteNotice(id) {
+      if (!confirm('確定刪除？')) return;
+      await fetch(`${CONFIG.API_URL}/api/admin/notices/${id}`, { method: 'DELETE', headers });
+      loadNotices();
+    }
+
+    loadNotices();
+  </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>後台登入</title>
+  <link rel="stylesheet" href="../style.css" />
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f5f5f0; }
+    .login-box { background: white; border-radius: 16px; padding: 36px 32px; width: 340px; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .login-box h2 { margin-bottom: 8px; font-size: 20px; }
+    .login-box p { color: #888; font-size: 14px; margin-bottom: 24px; }
+    .login-box input { width: 100%; padding: 12px 14px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; outline: none; margin-bottom: 16px; }
+    .login-box button { width: 100%; padding: 13px; background: #1a1a2e; color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .error { color: #e24b4a; font-size: 14px; margin-top: 10px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div style="font-size:40px; margin-bottom:12px;">🛍</div>
+    <h2>後台管理登入</h2>
+    <p>請輸入管理員密碼</p>
+    <input type="password" id="pw" placeholder="管理員密碼" onkeydown="if(event.key==='Enter')login()" />
+    <button onclick="login()">登入</button>
+    <div class="error" id="err">密碼錯誤，請重試</div>
+  </div>
+  <script src="../config.js"></script>
+  <script>
+    if (localStorage.getItem('admin_token')) location.href = 'index.html';
+    async function login() {
+      const pw = document.getElementById('pw').value;
+      const res = await fetch(`${CONFIG.API_URL}/api/auth/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      });
+      if (res.ok) {
+        const { token } = await res.json();
+        localStorage.setItem('admin_token', token);
+        location.href = 'index.html';
+      } else {
+        document.getElementById('err').style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>

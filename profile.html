@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的 - 我的小店</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-logo">🛍 我的小店</div>
+    <div class="nav-right">
+      <div class="cart-icon" onclick="location.href='cart.html'">🛒 <span class="cart-badge" id="cart-count">0</span></div>
+    </div>
+  </nav>
+  <div class="tab-bar">
+    <a href="index.html" class="tab">商品</a>
+    <a href="notices.html" class="tab">公告</a>
+    <a href="cart.html" class="tab">購物車</a>
+    <a href="profile.html" class="tab active">我的</a>
+  </div>
+  <main class="container">
+    <div id="profile-wrap"></div>
+  </main>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

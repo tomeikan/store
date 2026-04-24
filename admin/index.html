@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>後台管理 - 我的小店</title>
+  <link rel="stylesheet" href="../style.css" />
+</head>
+<body style="background:#f5f5f0;">
+  <nav class="admin-nav">
+    <span style="color:white;font-size:16px;font-weight:700;margin-right:24px;">🛍 後台管理</span>
+    <a href="index.html" class="active">總覽</a>
+    <a href="products.html">商品管理</a>
+    <a href="orders.html">訂單管理</a>
+    <a href="notices.html">公告管理</a>
+    <a href="users.html">會員管理</a>
+    <span style="flex:1;"></span>
+    <a href="../index.html" style="color:rgba(255,255,255,0.5);font-size:13px;">← 前台</a>
+  </nav>
+
+  <div class="admin-container">
+    <h1 class="admin-title">總覽儀表板</h1>
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="stat-label">今日訂單</div><div class="stat-value" id="s-orders">-</div></div>
+      <div class="stat-card"><div class="stat-label">今日營收</div><div class="stat-value" id="s-revenue">-</div></div>
+      <div class="stat-card"><div class="stat-label">商品總數</div><div class="stat-value" id="s-products">-</div></div>
+      <div class="stat-card"><div class="stat-label">會員總數</div><div class="stat-value" id="s-users">-</div></div>
+    </div>
+
+    <div class="section-title">最新訂單</div>
+    <table class="data-table" id="recent-orders">
+      <thead><tr><th>訂單編號</th><th>會員</th><th>金額</th><th>狀態</th><th>時間</th><th>操作</th></tr></thead>
+      <tbody id="orders-tbody"><tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px;">載入中...</td></tr></tbody>
+    </table>
+  </div>
+
+  <script src="../config.js"></script>
+  <script>
+    const token = localStorage.getItem('admin_token') || '';
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+    async function loadStats() {
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/api/admin/stats`, { headers });
+        const d = await res.json();
+        document.getElementById('s-orders').textContent = d.today_orders || 0;
+        document.getElementById('s-revenue').textContent = `NT$${(d.today_revenue || 0).toLocaleString()}`;
+        document.getElementById('s-products').textContent = d.total_products || 0;
+        document.getElementById('s-users').textContent = d.total_users || 0;
+      } catch(e) {}
+    }
+
+    async function loadRecentOrders() {
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/api/admin/orders?limit=10`, { headers });
+        const orders = await res.json();
+        const statusMap = { pending:'待付款', paid:'已付款', shipped:'已出貨', done:'已完成' };
+        document.getElementById('orders-tbody').innerHTML = orders.map(o => `
+          <tr>
+            <td>#${o.id}</td>
+            <td>${o.user_name || '-'}</td>
+            <td>NT$${o.total.toLocaleString()}</td>
+            <td>${statusMap[o.status] || o.status}</td>
+            <td>${new Date(o.created_at).toLocaleString('zh-TW')}</td>
+            <td>
+              <select onchange="updateStatus(${o.id}, this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid #ddd;font-size:13px;">
+                <option value="pending" ${o.status==='pending'?'selected':''}>待付款</option>
+                <option value="paid" ${o.status==='paid'?'selected':''}>已付款</option>
+                <option value="shipped" ${o.status==='shipped'?'selected':''}>已出貨</option>
+                <option value="done" ${o.status==='done'?'selected':''}>已完成</option>
+              </select>
+            </td>
+          </tr>`).join('');
+      } catch(e) {}
+    }
+
+    async function updateStatus(id, status) {
+      await fetch(`${CONFIG.API_URL}/api/admin/orders/${id}`, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({ status })
+      });
+    }
+
+    loadStats();
+    loadRecentOrders();
+  </script>
+</body>
+</html>

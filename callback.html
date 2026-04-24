@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登入中...</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;">
+    <div style="font-size:48px;">🔄</div>
+    <p id="status" style="color:#666;font-size:16px;">LINE 登入處理中，請稍候...</p>
+  </div>
+  <script src="config.js"></script>
+  <script>
+    (async () => {
+      const params = new URLSearchParams(location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+      const savedState = localStorage.getItem('line_state');
+
+      if (!code || state !== savedState) {
+        document.getElementById('status').textContent = '登入失敗，請重試';
+        setTimeout(() => location.href = 'profile.html', 2000);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/api/auth/line/callback`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, redirect_uri: CONFIG.LINE_CALLBACK_URL })
+        });
+        const data = await res.json();
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.removeItem('line_state');
+          document.getElementById('status').textContent = `歡迎回來，${data.user.display_name}！`;
+          setTimeout(() => location.href = 'profile.html', 1000);
+        } else {
+          throw new Error('No token');
+        }
+      } catch (e) {
+        document.getElementById('status').textContent = '登入失敗，請重試';
+        setTimeout(() => location.href = 'profile.html', 2000);
+      }
+    })();
+  </script>
+</body>
+</html>

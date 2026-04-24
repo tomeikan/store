@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的小店</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-logo">🛍 我的小店</div>
+    <div class="nav-right">
+      <div class="cart-icon" onclick="location.href='cart.html'">
+        🛒 <span class="cart-badge" id="cart-count">0</span>
+      </div>
+      <div class="user-icon" onclick="location.href='profile.html'">👤</div>
+    </div>
+  </nav>
+
+  <div class="tab-bar">
+    <a href="index.html" class="tab active">商品</a>
+    <a href="notices.html" class="tab">公告</a>
+    <a href="cart.html" class="tab">購物車</a>
+    <a href="profile.html" class="tab">我的</a>
+  </div>
+
+  <main class="container">
+    <div class="banner" id="banner-area">
+      <div class="banner-title">歡迎光臨</div>
+      <div class="banner-sub">精選好物，每天都有驚喜</div>
+    </div>
+
+    <div class="section-title">所有商品</div>
+    <div class="filter-bar">
+      <select id="category-filter" onchange="filterProducts()">
+        <option value="">全部分類</option>
+        <option value="food">食品</option>
+        <option value="toy">玩具/玩偶</option>
+        <option value="clothing">服飾</option>
+        <option value="life">生活用品</option>
+      </select>
+    </div>
+
+    <div class="product-grid" id="product-grid">
+      <div class="loading">載入中...</div>
+    </div>
+  </main>
+
+  <!-- 商品詳情 Modal -->
+  <div class="modal-overlay" id="modal" onclick="closeModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-img" id="modal-img"></div>
+      <div class="modal-info">
+        <h2 id="modal-name"></h2>
+        <p id="modal-price" class="modal-price"></p>
+        <p id="modal-desc" class="modal-desc"></p>
+        <div class="qty-row">
+          <button onclick="changeModalQty(-1)">−</button>
+          <span id="modal-qty">1</span>
+          <button onclick="changeModalQty(1)">+</button>
+        </div>
+        <button class="add-cart-btn" onclick="addToCartFromModal()">加入購物車</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

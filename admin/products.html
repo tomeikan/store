@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>商品管理</title>
+  <link rel="stylesheet" href="../style.css" />
+</head>
+<body style="background:#f5f5f0;">
+  <nav class="admin-nav">
+    <span style="color:white;font-size:16px;font-weight:700;margin-right:24px;">🛍 後台管理</span>
+    <a href="index.html">總覽</a>
+    <a href="products.html" class="active">商品管理</a>
+    <a href="orders.html">訂單管理</a>
+    <a href="notices.html">公告管理</a>
+    <a href="users.html">會員管理</a>
+  </nav>
+  <div class="admin-container">
+    <h1 class="admin-title">商品管理</h1>
+    <button class="btn-add" onclick="openForm()">+ 新增商品</button>
+    <table class="data-table">
+      <thead><tr><th>Emoji</th><th>商品名稱</th><th>分類</th><th>售價</th><th>原價</th><th>特賣</th><th>操作</th></tr></thead>
+      <tbody id="products-tbody"><tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px;">載入中...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- 表單 Modal -->
+  <div id="form-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:16px;padding:24px;width:90%;max-width:480px;max-height:90vh;overflow-y:auto;">
+      <h3 style="margin-bottom:20px;" id="form-title">新增商品</h3>
+      <input type="hidden" id="f-id" />
+      <div class="form-group"><label>Emoji 圖示</label><input id="f-emoji" placeholder="例如 🧸" /></div>
+      <div class="form-group"><label>商品名稱</label><input id="f-name" /></div>
+      <div class="form-group"><label>分類</label>
+        <select id="f-category">
+          <option value="food">食品</option>
+          <option value="toy">玩具/玩偶</option>
+          <option value="clothing">服飾</option>
+          <option value="life">生活用品</option>
+        </select>
+      </div>
+      <div class="form-group"><label>售價 (NT$)</label><input id="f-price" type="number" /></div>
+      <div class="form-group"><label>原價（選填，會顯示刪除線）</label><input id="f-original" type="number" /></div>
+      <div class="form-group"><label>商品說明</label><textarea id="f-desc"></textarea></div>
+      <div class="form-group">
+        <label><input type="checkbox" id="f-sale" /> 標示為特賣商品</label>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button class="btn-add" onclick="saveProduct()" style="flex:1;margin:0;">儲存</button>
+        <button onclick="closeForm()" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:10px;background:white;cursor:pointer;">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../config.js"></script>
+  <script>
+    const token = localStorage.getItem('admin_token') || '';
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+    let products = [];
+
+    async function loadProducts() {
+      const res = await fetch(`${CONFIG.API_URL}/api/admin/products`, { headers });
+      products = await res.json();
+      document.getElementById('products-tbody').innerHTML = products.map(p => `
+        <tr>
+          <td style="font-size:24px;">${p.emoji || '📦'}</td>
+          <td>${p.name}</td>
+          <td>${p.category}</td>
+          <td>NT$${p.price.toLocaleString()}</td>
+          <td>${p.original_price ? 'NT$' + p.original_price.toLocaleString() : '-'}</td>
+          <td>${p.is_sale ? '✅' : ''}</td>
+          <td>
+            <button class="btn-sm btn-edit" onclick="editProduct(${p.id})">編輯</button>
+            <button class="btn-sm btn-delete" onclick="deleteProduct(${p.id})">刪除</button>
+          </td>
+        </tr>`).join('');
+    }
+
+    function openForm(p = null) {
+      document.getElementById('form-title').textContent = p ? '編輯商品' : '新增商品';
+      document.getElementById('f-id').value = p ? p.id : '';
+      document.getElementById('f-emoji').value = p ? p.emoji : '';
+      document.getElementById('f-name').value = p ? p.name : '';
+      document.getElementById('f-category').value = p ? p.category : 'food';
+      document.getElementById('f-price').value = p ? p.price : '';
+      document.getElementById('f-original').value = p ? p.original_price || '' : '';
+      document.getElementById('f-desc').value = p ? p.description || '' : '';
+      document.getElementById('f-sale').checked = p ? p.is_sale : false;
+      document.getElementById('form-modal').style.display = 'flex';
+    }
+    function closeForm() { document.getElementById('form-modal').style.display = 'none'; }
+
+    function editProduct(id) { openForm(products.find(p => p.id === id)); }
+
+    async function saveProduct() {
+      const id = document.getElementById('f-id').value;
+      const body = {
+        emoji: document.getElementById('f-emoji').value,
+        name: document.getElementById('f-name').value,
+        category: document.getElementById('f-category').value,
+        price: Number(document.getElementById('f-price').value),
+        original_price: Number(document.getElementById('f-original').value) || null,
+        description: document.getElementById('f-desc').value,
+        is_sale: document.getElementById('f-sale').checked,
+      };
+      const url = id ? `${CONFIG.API_URL}/api/admin/products/${id}` : `${CONFIG.API_URL}/api/admin/products`;
+      await fetch(url, { method: id ? 'PUT' : 'POST', headers, body: JSON.stringify(body) });
+      closeForm();
+      loadProducts();
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('確定要刪除這個商品？')) return;
+      await fetch(`${CONFIG.API_URL}/api/admin/products/${id}`, { method: 'DELETE', headers });
+      loadProducts();
+    }
+
+    loadProducts();
+  </script>
+</body>
+</html>
