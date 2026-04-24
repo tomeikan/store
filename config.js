@@ -12,5 +12,5 @@ const CONFIG = {
 
   // LINE Login Callback URL（GitHub Pages 的網址）
   // 範例: 'https://yourusername.github.io/my-shop/callback.html'
-  LINE_CALLBACK_URL: 'https://tomeikan.github.io/my-shop/callback.html',
+  LINE_CALLBACK_URL: 'https://tomeikan.github.io/store/callback.html',
 };
