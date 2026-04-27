@@ -10,18 +10,19 @@ router.post('/line/callback', async (req, res) => {
   if (!code) return res.status(400).json({ error: '缺少 code' });
 
   try {
-    // 1. 用 code 換 access_token
-    const tokenRes = await axios.post('https://api.line.me/oauth2/v2.1/token',
-      new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: 'https://tomeikan.github.io/store/callback.html',
-        client_id: process.env.LINE_CHANNEL_ID,
-        client_secret: process.env.LINE_CHANNEL_SECRET,
-      }),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
-    const { access_token } = tokenRes.data;
+  const params = new URLSearchParams();
+  params.append('grant_type', 'authorization_code');
+  params.append('code', code);
+  params.append('redirect_uri', 'https://tomeikan.github.io/store/callback.html');
+  params.append('client_id', process.env.LINE_CHANNEL_ID);
+  params.append('client_secret', process.env.LINE_CHANNEL_SECRET);
+
+  const tokenRes = await axios.post(
+    'https://api.line.me/oauth2/v2.1/token',
+    params.toString(),
+    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+  );
+  const { access_token } = tokenRes.data;
 
     // 2. 取得 LINE 用戶資料
     const profileRes = await axios.get('https://api.line.me/v2/profile', {
