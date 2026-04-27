@@ -6,6 +6,7 @@ const supabase = require('../supabase');
 // LINE Login Callback
 router.post('/line/callback', async (req, res) => {
   const { code, redirect_uri } = req.body;
+  console.log('redirect_uri received:', redirect_uri);
   if (!code) return res.status(400).json({ error: '缺少 code' });
 
   try {
@@ -14,7 +15,7 @@ router.post('/line/callback', async (req, res) => {
       new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri,
+        redirect_uri: process.env.LINE_CALLBACK_URL || redirect_uri,
         client_id: process.env.LINE_CHANNEL_ID,
         client_secret: process.env.LINE_CHANNEL_SECRET,
       }),
