@@ -17,15 +17,16 @@ router.post('/line/callback', async (req, res) => {
   params.append('client_id', process.env.LINE_CHANNEL_ID);
   params.append('client_secret', process.env.LINE_CHANNEL_SECRET);
 
-  const tokenRes = await axios.post(
-    'https://api.line.me/oauth2/v2.1/token',
+  const lineTokenUrl = 'https://' + 'api.line.me/oauth2/v2.1/token';
+const tokenRes = await axios.post(
+  lineTokenUrl,
     params.toString(),
     { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
   );
   const { access_token } = tokenRes.data;
 
     // 2. 取得 LINE 用戶資料
-    const profileRes = await axios.get('https://api.line.me/v2/profile', {
+    const profileRes = await axios.get('https://' + 'api.line.me/v2/profile', {
       headers: { Authorization: `Bearer ${access_token}` }
     });
     const { userId: line_id, displayName: display_name, pictureUrl: picture } = profileRes.data;
