@@ -46,8 +46,9 @@ router.post('/line/callback', async (req, res) => {
 
     res.json({ token, user: { id: user.id, display_name, picture } });
   } catch (e) {
-    console.error('LINE login error:', e.message);
-    res.status(500).json({ error: '登入失敗' });
+  console.error('LINE login error:', e.message);
+  console.error('LINE error detail:', JSON.stringify(e.response?.data));
+  res.status(500).json({ error: '登入失敗' });
   }
 });
 
