@@ -1,7 +1,38 @@
 const router = require('express').Router();
-const axios = require('axios');
+const https = require('https');
 const jwt = require('jsonwebtoken');
 const supabase = require('../supabase');
+
+function httpsPost(hostname, path, data, headers) {
+  return new Promise((resolve, reject) => {
+    const body = typeof data === 'string' ? data : JSON.stringify(data);
+    const options = {
+      hostname, path, method: 'POST',
+      headers: { ...headers, 'Content-Length': Buffer.byteLength(body) }
+    };
+    const req = https.request(options, (res) => {
+      let raw = '';
+      res.on('data', chunk => raw += chunk);
+      res.on('end', () => resolve(JSON.parse(raw)));
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+function httpsGet(hostname, path, headers) {
+  return new Promise((resolve, reject) => {
+    const options = { hostname, path, method: 'GET', headers };
+    const req = https.request(options, (res) => {
+      let raw = '';
+      res.on('data', chunk => raw += chunk);
+      res.on('end', () => resolve(JSON.parse(raw)));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
 
 router.post('/line/callback', async (req, res) => {
   const { code } = req.body;
@@ -10,50 +41,53 @@ router.post('/line/callback', async (req, res) => {
   const CALLBACK_URL = 'https://tomeikan.github.io/store/callback.html';
 
   try {
-    const params = new URLSearchParams();
-    params.append('grant_type', 'authorization_code');
-    params.append('code', code);
-    params.append('redirect_uri', CALLBACK_URL);
-    params.append('client_id', process.env.LINE_CHANNEL_ID);
-    params.append('client_secret', process.env.LINE_CHANNEL_SECRET);
+    const body = [
+      'grant_type=authorization_code',
+      'code=' + encodeURIComponent(code),
+      'redirect_uri=' + encodeURIComponent(CALLBACK_URL),
+      'client_id=' + encodeURIComponent(process.env.LINE_CHANNEL_ID),
+      'client_secret=' + encodeURIComponent(process.env.LINE_CHANNEL_SECRET)
+    ].join('&');
 
-    const tokenRes = await axios({
-      method: 'post',
-      url: 'https://api.line.me/oauth2/v2.1/token',
-      data: params.toString(),
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    });
+    const tokenData = await httpsPost(
+      'api.line.me',
+      '/oauth2/v2.1/token',
+      body,
+      { 'Content-Type': 'application/x-www-form-urlencoded' }
+    );
 
-    const access_token = tokenRes.data.access_token;
+    console.log('Token response:', JSON.stringify(tokenData));
 
-    const profileRes = await axios({
-      method: 'get',
-      url: 'https://api.line.me/v2/profile',
-      headers: { Authorization: 'Bearer ' + access_token }
-    });
+    if (!tokenData.access_token) throw new Error('No access_token: ' + JSON.stringify(tokenData));
 
-    const line_id = profileRes.data.userId;
-    const display_name = profileRes.data.displayName;
-    const picture = profileRes.data.pictureUrl;
+    const profile = await httpsGet(
+      'api.line.me',
+      '/v2/profile',
+      { Authorization: 'Bearer ' + tokenData.access_token }
+    );
+
+    console.log('Profile:', JSON.stringify(profile));
 
     const { data: user, error } = await supabase
       .from('users')
-      .upsert({ line_id, display_name, picture }, { onConflict: 'line_id' })
+      .upsert(
+        { line_id: profile.userId, display_name: profile.displayName, picture: profile.pictureUrl },
+        { onConflict: 'line_id' }
+      )
       .select().single();
 
     if (error) throw error;
 
     const token = jwt.sign(
-      { id: user.id, line_id, display_name, picture },
+      { id: user.id, line_id: profile.userId, display_name: profile.displayName, picture: profile.pictureUrl },
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
 
-    res.json({ token, user: { id: user.id, display_name, picture } });
+    res.json({ token, user: { id: user.id, display_name: profile.displayName, picture: profile.pictureUrl } });
 
   } catch (e) {
     console.error('LINE login error:', e.message);
-    console.error('LINE error detail:', JSON.stringify(e.response && e.response.data));
     res.status(500).json({ error: '登入失敗' });
   }
 });
