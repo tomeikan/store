@@ -15,7 +15,7 @@ router.post('/line/callback', async (req, res) => {
       new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: process.env.LINE_CALLBACK_URL || redirect_uri,
+        redirect_uri: 'https://tomeikan.github.io/store/callback.html',
         client_id: process.env.LINE_CHANNEL_ID,
         client_secret: process.env.LINE_CHANNEL_SECRET,
       }),
