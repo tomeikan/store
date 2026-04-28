@@ -86,10 +86,11 @@ router.post('/line/callback', async (req, res) => {
 
     res.json({ token, user: { id: user.id, display_name: profile.displayName, picture: profile.pictureUrl } });
 
-  } catch (e) {
-    console.error('LINE login error:', e.message);
-    res.status(500).json({ error: '登入失敗' });
-  }
+} catch (e) {
+  console.error('LINE login error:', e.message);
+  console.error('Full error:', JSON.stringify(e));
+  res.status(500).json({ error: '登入失敗' });
+}
 });
 
 router.post('/admin/login', (req, res) => {
