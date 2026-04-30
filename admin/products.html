@@ -195,8 +195,9 @@
 <script src="../config.js"></script>
 <script src="admin.js"></script>
 <script>
-// ===== 圖片上傳 =====
-let uploadedImages = []; // [{url, file, isNew}]
+// ===== 圖片上傳（Supabase Storage）=====
+let uploadedImages = []; // [{url, isNew}]
+let isUploading = false;
 
 function handleDrop(e) {
   e.preventDefault();
@@ -204,39 +205,59 @@ function handleDrop(e) {
   handleImgSelect(e.dataTransfer.files);
 }
 
-function handleImgSelect(files) {
+async function handleImgSelect(files) {
+  if (isUploading) return;
   const arr = Array.from(files);
   const remaining = 5 - uploadedImages.length;
   if (remaining <= 0) { alert('最多只能上傳 5 張圖片'); return; }
-  arr.slice(0, remaining).forEach(file => {
-    if (file.size > 10 * 1024 * 1024) { alert(`${file.name} 超過 10MB 限制`); return; }
-    const reader = new FileReader();
-    reader.onload = e => {
-      // 壓縮圖片再存
-      compressImage(e.target.result, 800, 0.75, compressed => {
-        uploadedImages.push({ url: compressed, isNew: true });
-        renderImgPreview();
-      });
-    };
-    reader.readAsDataURL(file);
-  });
+
+  const toUpload = arr.slice(0, remaining);
+  for (const file of toUpload) {
+    if (file.size > 10 * 1024 * 1024) { alert(`${file.name} 超過 10MB 限制`); continue; }
+    await uploadSingleImage(file);
+  }
   document.getElementById('img-file').value = '';
 }
 
-function compressImage(base64, maxSize, quality, callback) {
-  const img = new Image();
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    let w = img.width, h = img.height;
-    if (w > maxSize || h > maxSize) {
-      if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
-      else { w = Math.round(w * maxSize / h); h = maxSize; }
-    }
-    canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    callback(canvas.toDataURL('image/jpeg', quality));
-  };
-  img.src = base64;
+async function uploadSingleImage(file) {
+  isUploading = true;
+  const prog = document.getElementById('upload-progress');
+  const bar = document.getElementById('upload-progress-bar');
+  prog.style.display = 'block';
+  bar.style.width = '30%';
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        bar.style.width = '60%';
+        const res = await fetch(CONFIG.API_URL + '/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
+          body: JSON.stringify({
+            base64: e.target.result,
+            filename: file.name,
+            mimetype: file.type
+          })
+        });
+        const data = await res.json();
+        bar.style.width = '100%';
+        if (data.url) {
+          uploadedImages.push({ url: data.url, isNew: true });
+          renderImgPreview();
+        } else {
+          alert('上傳失敗：' + (data.error || '未知錯誤'));
+        }
+      } catch(err) {
+        alert('上傳失敗，請重試');
+      } finally {
+        isUploading = false;
+        setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0%'; }, 600);
+        resolve();
+      }
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function removeImg(i) {
@@ -254,8 +275,8 @@ function renderImgPreview() {
 }
 
 // ===== 覆寫 openDrawer 加入圖片邏輯 =====
+const _origOpenDrawer = openDrawer;
 function openDrawer(p = null) {
-  // 重置圖片
   uploadedImages = [];
   if (p && p.images) {
     try {
@@ -266,37 +287,7 @@ function openDrawer(p = null) {
     }
   }
   renderImgPreview();
-
-  // 填入欄位
-  document.getElementById('drawer-title').textContent = p ? '編輯商品' : '新增商品';
-  document.getElementById('f-id').value = p ? p.id : '';
-  document.getElementById('f-name').value = p ? p.name : '';
-  document.getElementById('f-price').value = p ? p.price : '';
-  document.getElementById('f-original').value = p ? p.original_price||'' : '';
-  document.getElementById('f-deposit').value = p ? p.deposit||'' : '';
-  document.getElementById('f-cost').value = p ? p.cost||'' : '';
-  document.getElementById('f-supplier').value = p ? p.supplier||'' : '';
-  document.getElementById('f-deadline').value = p ? p.deadline||'' : '';
-  document.getElementById('f-desc').value = p ? p.description||'' : '';
-  document.getElementById('f-type').value = p ? p.product_type||'preorder' : 'preorder';
-  document.getElementById('f-status').value = p ? (p.is_active?'active':'inactive') : 'active';
-  document.getElementById('f-sale').value = p ? String(p.is_sale) : 'false';
-
-  specs = p && p.specs ? JSON.parse(p.specs) : [];
-  renderSpecs();
-  renderCategoryList();
-  renderCategorySelects();
-
-  if (p) {
-    document.getElementById('f-category').value = p.category||'';
-    updateSubcategory();
-    if (p.subcategory) setTimeout(() => document.getElementById('f-subcategory').value = p.subcategory, 50);
-    if (p.arrive_year) document.getElementById('f-arrive-year').value = p.arrive_year;
-    if (p.arrive_month) document.getElementById('f-arrive-month').value = p.arrive_month;
-  }
-
-  document.getElementById('drawer').classList.add('open');
-  document.getElementById('drawer-overlay').classList.add('open');
+  _origOpenDrawer(p);
 }
 
 // ===== 覆寫 saveProduct 加入圖片 =====
@@ -319,15 +310,8 @@ window.saveProduct = async function() {
     return;
   }
 
-  // 顯示上傳進度
-  const prog = document.getElementById('upload-progress');
-  const bar = document.getElementById('upload-progress-bar');
-  prog.style.display = 'block';
-  bar.style.width = '30%';
-
-  // 把圖片轉成 JSON 陣列存入 images 欄位（base64）
+  // 圖片網址陣列
   const imageUrls = uploadedImages.map(img => img.url);
-  bar.style.width = '70%';
 
   const id = document.getElementById('f-id').value;
   const body = {
@@ -353,8 +337,6 @@ window.saveProduct = async function() {
 
   const url = id ? CONFIG.API_URL+'/api/admin/products/'+id : CONFIG.API_URL+'/api/admin/products';
   await fetch(url, { method: id ? 'PUT' : 'POST', headers: adminHeaders, body: JSON.stringify(body) });
-  bar.style.width = '100%';
-  setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0%'; }, 500);
   closeDrawer();
   loadProducts();
 };
