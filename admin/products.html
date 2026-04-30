@@ -209,15 +209,34 @@ function handleImgSelect(files) {
   const remaining = 5 - uploadedImages.length;
   if (remaining <= 0) { alert('最多只能上傳 5 張圖片'); return; }
   arr.slice(0, remaining).forEach(file => {
-    if (file.size > 5 * 1024 * 1024) { alert(`${file.name} 超過 5MB 限制`); return; }
+    if (file.size > 10 * 1024 * 1024) { alert(`${file.name} 超過 10MB 限制`); return; }
     const reader = new FileReader();
     reader.onload = e => {
-      uploadedImages.push({ url: e.target.result, file, isNew: true });
-      renderImgPreview();
+      // 壓縮圖片再存
+      compressImage(e.target.result, 800, 0.75, compressed => {
+        uploadedImages.push({ url: compressed, isNew: true });
+        renderImgPreview();
+      });
     };
     reader.readAsDataURL(file);
   });
   document.getElementById('img-file').value = '';
+}
+
+function compressImage(base64, maxSize, quality, callback) {
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    let w = img.width, h = img.height;
+    if (w > maxSize || h > maxSize) {
+      if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+      else { w = Math.round(w * maxSize / h); h = maxSize; }
+    }
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    callback(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.src = base64;
 }
 
 function removeImg(i) {
