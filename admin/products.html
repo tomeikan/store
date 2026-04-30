@@ -235,8 +235,8 @@ function renderImgPreview() {
 }
 
 // ===== 覆寫 openDrawer 加入圖片邏輯 =====
-const _origOpenDrawer = openDrawer;
 function openDrawer(p = null) {
+  // 重置圖片
   uploadedImages = [];
   if (p && p.images) {
     try {
@@ -247,7 +247,37 @@ function openDrawer(p = null) {
     }
   }
   renderImgPreview();
-  _origOpenDrawer(p);
+
+  // 填入欄位
+  document.getElementById('drawer-title').textContent = p ? '編輯商品' : '新增商品';
+  document.getElementById('f-id').value = p ? p.id : '';
+  document.getElementById('f-name').value = p ? p.name : '';
+  document.getElementById('f-price').value = p ? p.price : '';
+  document.getElementById('f-original').value = p ? p.original_price||'' : '';
+  document.getElementById('f-deposit').value = p ? p.deposit||'' : '';
+  document.getElementById('f-cost').value = p ? p.cost||'' : '';
+  document.getElementById('f-supplier').value = p ? p.supplier||'' : '';
+  document.getElementById('f-deadline').value = p ? p.deadline||'' : '';
+  document.getElementById('f-desc').value = p ? p.description||'' : '';
+  document.getElementById('f-type').value = p ? p.product_type||'preorder' : 'preorder';
+  document.getElementById('f-status').value = p ? (p.is_active?'active':'inactive') : 'active';
+  document.getElementById('f-sale').value = p ? String(p.is_sale) : 'false';
+
+  specs = p && p.specs ? JSON.parse(p.specs) : [];
+  renderSpecs();
+  renderCategoryList();
+  renderCategorySelects();
+
+  if (p) {
+    document.getElementById('f-category').value = p.category||'';
+    updateSubcategory();
+    if (p.subcategory) setTimeout(() => document.getElementById('f-subcategory').value = p.subcategory, 50);
+    if (p.arrive_year) document.getElementById('f-arrive-year').value = p.arrive_year;
+    if (p.arrive_month) document.getElementById('f-arrive-month').value = p.arrive_month;
+  }
+
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('open');
 }
 
 // ===== 覆寫 saveProduct 加入圖片 =====
