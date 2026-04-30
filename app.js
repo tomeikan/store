@@ -59,11 +59,21 @@ function renderProducts(products) {
     grid.innerHTML = '<div class="loading">目前沒有商品</div>';
     return;
   }
-  grid.innerHTML = products.map(p => `
-    <div class="product-card" onclick="openModal(${p.id})">
-      <div class="product-thumb">${p.emoji || '📦'}</div>
+  grid.innerHTML = products.map(p => {
+    // 取得主圖
+    let thumbHtml = `<div class="product-thumb" style="background:#f0f7ff;">${p.emoji || '📦'}</div>`;
+    if (p.images) {
+      try {
+        const imgs = JSON.parse(p.images);
+        if (imgs.length) thumbHtml = `<img src="${imgs[0]}" style="width:100%;height:130px;object-fit:cover;display:block;" alt="${p.name}" />`;
+      } catch(e) {}
+    }
+    return `
+    <div class="product-card" onclick="location.href='product.html?id=${p.id}'">
+      ${thumbHtml}
       <div class="product-body">
         ${p.is_sale ? '<span class="product-tag">特賣</span>' : ''}
+        ${p.product_type === 'preorder' ? '<span class="product-tag" style="background:#e6f1fb;color:#185fa5;">預購</span>' : ''}
         <div class="product-name">${p.name}</div>
         <div>
           <span class="product-price">NT$${p.price.toLocaleString()}</span>
@@ -71,8 +81,8 @@ function renderProducts(products) {
         </div>
         <button class="add-btn" onclick="event.stopPropagation(); quickAdd(${p.id})">加入購物車</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function filterProducts() {
