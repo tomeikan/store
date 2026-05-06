@@ -6,22 +6,19 @@
   <title>商品管理 - 後台</title>
   <link rel="stylesheet" href="admin.css" />
   <style>
-    .img-upload-area {
-      border: 2px dashed #d0e8f8; border-radius: 12px;
-      padding: 28px 20px; text-align: center; cursor: pointer;
-      transition: all 0.2s; background: #fafcff;
-    }
-    .img-upload-area:hover { border-color: #378add; background: #f0f7ff; }
-    .img-upload-icon { font-size: 32px; margin-bottom: 8px; }
-    .img-upload-text { font-size: 13px; color: #aaa; }
-    .img-upload-text span { color: #378add; text-decoration: underline; }
-    .img-preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
-    .img-preview-item { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 1px solid #e8f0f8; background: #f8fbff; }
-    .img-preview-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .img-preview-remove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; background: rgba(0,0,0,0.55); border-radius: 50%; color: white; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
-    .img-main-badge { position: absolute; bottom: 4px; left: 4px; background: #378add; color: white; font-size: 9px; padding: 2px 6px; border-radius: 8px; }
-    .upload-progress { height: 3px; background: #e8f0f8; border-radius: 2px; margin-top: 8px; overflow: hidden; display: none; }
-    .upload-progress-bar { height: 100%; background: #378add; transition: width 0.3s; width: 0%; }
+    .img-upload-area { border:2px dashed #d0e8f8;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:#fafcff; }
+    .img-upload-area:hover { border-color:#378add;background:#f0f7ff; }
+    .img-upload-icon { font-size:32px;margin-bottom:8px; }
+    .img-upload-text { font-size:13px;color:#aaa; }
+    .img-upload-text span { color:#378add;text-decoration:underline; }
+    .img-preview-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px; }
+    .img-preview-item { position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid #e8f0f8;background:#f8fbff; }
+    .img-preview-item img { width:100%;height:100%;object-fit:cover;display:block; }
+    .img-preview-remove { position:absolute;top:4px;right:4px;width:22px;height:22px;background:rgba(0,0,0,0.55);border-radius:50%;color:white;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center; }
+    .img-main-badge { position:absolute;bottom:4px;left:4px;background:#378add;color:white;font-size:9px;padding:2px 6px;border-radius:8px; }
+    .upload-progress { height:3px;background:#e8f0f8;border-radius:2px;margin-top:8px;overflow:hidden;display:none; }
+    .upload-progress-bar { height:100%;background:#378add;transition:width 0.3s;width:0%; }
+    .uploading-msg { font-size:12px;color:#378add;margin-top:6px;display:none; }
   </style>
 </head>
 <body>
@@ -41,7 +38,7 @@
 <div class="main">
   <div class="topbar">
     <div class="topbar-title">商品管理</div>
-    <div class="topbar-right"><button class="btn-primary" onclick="openDrawer()">+ 新增商品</button></div>
+    <div class="topbar-right"><button class="btn-primary" onclick="openDrawer(null)">+ 新增商品</button></div>
   </div>
   <div class="content">
     <div class="product-table-wrap">
@@ -66,21 +63,20 @@
   <div class="drawer-body">
     <input type="hidden" id="f-id" />
 
-    <!-- 圖片上傳 -->
     <div class="form-section">
       <div class="form-section-title">商品圖片</div>
       <div class="img-upload-area" id="upload-area" onclick="document.getElementById('img-file').click()" ondragover="event.preventDefault();this.style.borderColor='#378add'" ondragleave="this.style.borderColor='#d0e8f8'" ondrop="handleDrop(event)">
         <div class="img-upload-icon">📷</div>
         <div class="img-upload-text">拖曳圖片到此，或<span>點擊選擇檔案</span></div>
-        <div class="img-upload-text" style="margin-top:4px;font-size:11px;">支援 JPG、PNG、WEBP，最多 5 張，每張限 5MB</div>
+        <div class="img-upload-text" style="margin-top:4px;font-size:11px;">支援 JPG、PNG、WEBP，最多 5 張</div>
       </div>
       <input type="file" id="img-file" accept="image/jpeg,image/png,image/webp" multiple style="display:none" onchange="handleImgSelect(this.files)" />
-      <div class="upload-progress" id="upload-progress"><div class="upload-progress-bar" id="upload-progress-bar"></div></div>
+      <div class="upload-progress" id="upload-progress"><div class="upload-progress-bar" id="upload-bar"></div></div>
+      <div class="uploading-msg" id="uploading-msg">⏳ 上傳中，請稍候...</div>
       <div class="img-preview-grid" id="img-preview"></div>
-      <div style="font-size:11px;color:#aaa;margin-top:8px;">第一張圖片為主圖，點擊 ✕ 可刪除</div>
+      <div style="font-size:11px;color:#aaa;margin-top:8px;">第一張為主圖，點 ✕ 可刪除</div>
     </div>
 
-    <!-- 基本資訊 -->
     <div class="form-section">
       <div class="form-section-title">基本資訊</div>
       <div class="form-row col2">
@@ -104,9 +100,7 @@
       <div class="form-row col2">
         <div class="form-group">
           <label class="form-label required">分類</label>
-          <select class="form-select" id="f-category" onchange="updateSubcategory()">
-            <option value="">選擇分類</option>
-          </select>
+          <select class="form-select" id="f-category" onchange="updateSubcategory()"><option value="">選擇分類</option></select>
         </div>
         <div class="form-group">
           <label class="form-label">子分類</label>
@@ -128,7 +122,6 @@
       </div>
     </div>
 
-    <!-- 規格 -->
     <div class="form-section">
       <div class="form-section-title">商品規格</div>
       <div class="spec-table">
@@ -138,7 +131,6 @@
       <button class="add-spec-btn" onclick="addSpec()">+ 新增規格</button>
     </div>
 
-    <!-- 價格 -->
     <div class="form-section">
       <div class="form-section-title">價格資訊</div>
       <div class="form-row col3">
@@ -152,7 +144,6 @@
       </div>
     </div>
 
-    <!-- 時間 -->
     <div class="form-section">
       <div class="form-section-title">時間資訊</div>
       <div class="form-row col2">
@@ -167,7 +158,6 @@
       </div>
     </div>
 
-    <!-- 描述 -->
     <div class="form-section">
       <div class="form-section-title">其他資訊</div>
       <div class="form-group">
@@ -188,15 +178,15 @@
   </div>
   <div class="drawer-footer">
     <button class="btn-cancel" onclick="closeDrawer()">取消</button>
-    <button class="btn-primary" onclick="saveProduct()">儲存商品</button>
+    <button class="btn-primary" id="save-btn" onclick="doSaveProduct()">儲存商品</button>
   </div>
 </div>
 
 <script src="../config.js"></script>
 <script src="admin.js"></script>
 <script>
-// ===== 圖片上傳（Supabase Storage）=====
-let uploadedImages = []; // [{url, isNew}]
+// ===== 圖片 =====
+let uploadedImages = [];
 let isUploading = false;
 
 function handleDrop(e) {
@@ -206,53 +196,49 @@ function handleDrop(e) {
 }
 
 async function handleImgSelect(files) {
-  if (isUploading) return;
+  if (isUploading) { alert('請等待目前圖片上傳完成'); return; }
   const arr = Array.from(files);
   const remaining = 5 - uploadedImages.length;
   if (remaining <= 0) { alert('最多只能上傳 5 張圖片'); return; }
-
-  const toUpload = arr.slice(0, remaining);
-  for (const file of toUpload) {
-    if (file.size > 10 * 1024 * 1024) { alert(`${file.name} 超過 10MB 限制`); continue; }
-    await uploadSingleImage(file);
+  for (const file of arr.slice(0, remaining)) {
+    if (file.size > 10 * 1024 * 1024) { alert(file.name + ' 超過 10MB'); continue; }
+    await uploadOne(file);
   }
   document.getElementById('img-file').value = '';
 }
 
-async function uploadSingleImage(file) {
+async function uploadOne(file) {
   isUploading = true;
   const prog = document.getElementById('upload-progress');
-  const bar = document.getElementById('upload-progress-bar');
+  const bar = document.getElementById('upload-bar');
+  const msg = document.getElementById('uploading-msg');
   prog.style.display = 'block';
-  bar.style.width = '30%';
+  msg.style.display = 'block';
+  bar.style.width = '40%';
 
   return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    reader.onload = async (ev) => {
       try {
-        bar.style.width = '60%';
+        bar.style.width = '70%';
         const res = await fetch(CONFIG.API_URL + '/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
-          body: JSON.stringify({
-            base64: e.target.result,
-            filename: file.name,
-            mimetype: file.type
-          })
+          body: JSON.stringify({ base64: ev.target.result, filename: file.name, mimetype: file.type })
         });
         const data = await res.json();
         bar.style.width = '100%';
         if (data.url) {
-          uploadedImages.push({ url: data.url, isNew: true });
+          uploadedImages.push({ url: data.url });
           renderImgPreview();
         } else {
-          alert('上傳失敗：' + (data.error || '未知錯誤'));
+          alert('上傳失敗：' + (data.error || '請重試'));
         }
       } catch(err) {
-        alert('上傳失敗，請重試');
+        alert('上傳失敗，請確認網路連線');
       } finally {
         isUploading = false;
-        setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0%'; }, 600);
+        setTimeout(() => { prog.style.display='none'; bar.style.width='0%'; msg.style.display='none'; }, 600);
         resolve();
       }
     };
@@ -268,32 +254,140 @@ function removeImg(i) {
 function renderImgPreview() {
   document.getElementById('img-preview').innerHTML = uploadedImages.map((img, i) => `
     <div class="img-preview-item">
-      <img src="${img.url}" alt="商品圖片 ${i+1}" />
+      <img src="${img.url}" />
       ${i === 0 ? '<span class="img-main-badge">主圖</span>' : ''}
       <button class="img-preview-remove" onclick="removeImg(${i})">✕</button>
     </div>`).join('');
 }
 
-// ===== 覆寫 openDrawer 加入圖片邏輯 =====
-const _origOpenDrawer = openDrawer;
-function openDrawer(p = null) {
+// ===== 開啟/關閉抽屜 =====
+function openDrawer(p) {
+  // 重置圖片
   uploadedImages = [];
   if (p && p.images) {
     try {
       const imgs = JSON.parse(p.images);
-      imgs.forEach(url => uploadedImages.push({ url, isNew: false }));
+      imgs.forEach(url => uploadedImages.push({ url }));
     } catch(e) {
-      if (p.images) uploadedImages.push({ url: p.images, isNew: false });
+      if (p.images) uploadedImages.push({ url: p.images });
     }
   }
   renderImgPreview();
-  _origOpenDrawer(p);
+
+  // 填入欄位
+  document.getElementById('drawer-title').textContent = p ? '編輯商品' : '新增商品';
+  document.getElementById('f-id').value = p ? p.id : '';
+  document.getElementById('f-name').value = p ? p.name||'' : '';
+  document.getElementById('f-price').value = p ? p.price||'' : '';
+  document.getElementById('f-original').value = p ? p.original_price||'' : '';
+  document.getElementById('f-deposit').value = p ? p.deposit||'' : '';
+  document.getElementById('f-cost').value = p ? p.cost||'' : '';
+  document.getElementById('f-supplier').value = p ? p.supplier||'' : '';
+  document.getElementById('f-deadline').value = p ? p.deadline||'' : '';
+  document.getElementById('f-desc').value = p ? p.description||'' : '';
+
+  // Radio buttons 重置
+  document.getElementById('f-type').value = p ? (p.product_type||'preorder') : 'preorder';
+  document.getElementById('f-status').value = p ? (p.is_active ? 'active' : 'inactive') : 'active';
+  document.getElementById('f-sale').value = p ? String(p.is_sale||false) : 'false';
+  resetRadio('type-group', p ? (p.product_type||'preorder') : 'preorder', ['preorder','instock']);
+  resetRadio('status-group', p ? (p.is_active ? 'active' : 'inactive') : 'active', ['active','inactive'], true);
+  resetRadio('sale-group', p ? String(p.is_sale||false) : 'false', ['true','false'], true);
+
+  // 規格
+  specs = p && p.specs ? JSON.parse(p.specs) : [];
+  renderSpecs();
+
+  // 分類
+  renderCategoryList();
+  renderCategorySelects();
+  if (p && p.category) {
+    document.getElementById('f-category').value = p.category;
+    updateSubcategory();
+    if (p.subcategory) setTimeout(() => { document.getElementById('f-subcategory').value = p.subcategory; }, 60);
+  }
+
+  // 年月
+  initDateSelects();
+  if (p && p.arrive_year) document.getElementById('f-arrive-year').value = p.arrive_year;
+  if (p && p.arrive_month) document.getElementById('f-arrive-month').value = p.arrive_month;
+
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('open');
 }
 
-// ===== 覆寫 saveProduct 加入圖片 =====
-const _origSave = saveProduct;
-window.saveProduct = async function() {
-  const emoji = document.getElementById('f-emoji') ? document.getElementById('f-emoji').value : '';
+function resetRadio(groupId, value, values, green) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  const btns = group.querySelectorAll('.radio-btn');
+  btns.forEach((btn, i) => {
+    btn.classList.remove('active', 'active-green');
+    if (values[i] === value) {
+      btn.classList.add('active');
+      if (green) btn.classList.add('active-green');
+    }
+  });
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+
+// ===== 商品列表 =====
+let products = [];
+
+async function loadProducts() {
+  try {
+    const res = await fetch(CONFIG.API_URL + '/api/admin/products', { headers: adminHeaders });
+    products = await res.json();
+    renderProductTable(products);
+    const cnt = document.getElementById('product-count');
+    if (cnt) cnt.textContent = '共 ' + products.length + ' 件';
+  } catch(e) {
+    document.getElementById('products-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:32px;">載入失敗</td></tr>';
+  }
+}
+
+function renderProductTable(list) {
+  const tb = document.getElementById('products-tbody');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:32px;">目前沒有商品</td></tr>'; return; }
+  tb.innerHTML = list.map(p => {
+    let thumb = '<div style="width:44px;height:44px;border-radius:8px;background:#f0f6fc;display:flex;align-items:center;justify-content:center;font-size:22px;">📦</div>';
+    if (p.images) {
+      try { const imgs = JSON.parse(p.images); if (imgs.length) thumb = `<img src="${imgs[0]}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;" />`; } catch(e) {}
+    }
+    return `<tr>
+      <td>${thumb}</td>
+      <td style="font-weight:500;">${p.name}</td>
+      <td style="color:#888;font-size:12px;">${p.category||'-'}${p.subcategory?'/'+p.subcategory:''}</td>
+      <td><span class="badge ${p.product_type==='preorder'?'badge-preorder':'badge-instock'}">${p.product_type==='preorder'?'預購':'現貨'}</span></td>
+      <td>NT$${(p.price||0).toLocaleString()}</td>
+      <td><span class="badge ${p.is_active?'badge-active':'badge-inactive'}">${p.is_active?'上架':'下架'}</span></td>
+      <td>
+        <button class="btn-sm btn-edit" onclick="editProduct(${p.id})">編輯</button>
+        <button class="btn-sm btn-delete" onclick="deleteProduct(${p.id})">刪除</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTable(q) {
+  renderProductTable(products.filter(p => p.name.toLowerCase().includes(q.toLowerCase())));
+}
+
+function editProduct(id) {
+  openDrawer(products.find(p => p.id === id) || null);
+}
+
+async function deleteProduct(id) {
+  if (!confirm('確定要刪除這個商品？')) return;
+  await fetch(CONFIG.API_URL + '/api/admin/products/' + id, { method: 'DELETE', headers: adminHeaders });
+  loadProducts();
+}
+
+// ===== 儲存商品 =====
+async function doSaveProduct() {
   const name = document.getElementById('f-name').value.trim();
   const price = document.getElementById('f-price').value;
   const desc = document.getElementById('f-desc').value.trim();
@@ -301,8 +395,8 @@ window.saveProduct = async function() {
   const type = document.getElementById('f-type').value;
   const status = document.getElementById('f-status').value;
 
-  if (!name || !price || !desc || !category || !type || !status) {
-    alert('請填寫所有必填欄位（標 * 的欄位）');
+  if (!name || !price || !desc || !category) {
+    alert('請填寫必填欄位：商品名稱、分類、售價、商品說明');
     return;
   }
   if (uploadedImages.length === 0) {
@@ -310,15 +404,14 @@ window.saveProduct = async function() {
     return;
   }
 
-  // 圖片網址陣列
-  const imageUrls = uploadedImages.map(img => img.url);
+  const btn = document.getElementById('save-btn');
+  btn.textContent = '儲存中...';
+  btn.disabled = true;
 
   const id = document.getElementById('f-id').value;
   const body = {
-    emoji: uploadedImages.length ? '' : (emoji || '📦'),
-    images: JSON.stringify(imageUrls),
-    name,
-    category,
+    images: JSON.stringify(uploadedImages.map(i => i.url)),
+    name, category,
     subcategory: document.getElementById('f-subcategory').value,
     product_type: type,
     is_active: status === 'active',
@@ -333,43 +426,24 @@ window.saveProduct = async function() {
     description: desc,
     is_sale: document.getElementById('f-sale').value === 'true',
     specs: JSON.stringify(specs),
+    emoji: '📦',
   };
 
-  const url = id ? CONFIG.API_URL+'/api/admin/products/'+id : CONFIG.API_URL+'/api/admin/products';
-  await fetch(url, { method: id ? 'PUT' : 'POST', headers: adminHeaders, body: JSON.stringify(body) });
-  closeDrawer();
-  loadProducts();
-};
-
-// ===== 覆寫 renderProducts 顯示縮圖 =====
-function renderProducts(list) {
-  const tb = document.getElementById('products-tbody');
-  if (!tb) return;
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:32px;">目前沒有商品</td></tr>'; return; }
-  tb.innerHTML = list.map(p => {
-    let thumbHtml = '<div style="width:44px;height:44px;border-radius:8px;background:#f0f6fc;display:flex;align-items:center;justify-content:center;font-size:22px;">📦</div>';
-    if (p.images) {
-      try {
-        const imgs = JSON.parse(p.images);
-        if (imgs.length) thumbHtml = `<img src="${imgs[0]}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;display:block;" />`;
-      } catch(e) {}
-    }
-    return `<tr>
-      <td>${thumbHtml}</td>
-      <td style="font-weight:500;">${p.name}</td>
-      <td style="color:#888;font-size:12px;">${p.category||'-'}${p.subcategory?'/'+p.subcategory:''}</td>
-      <td><span class="badge ${p.product_type==='preorder'?'badge-preorder':'badge-instock'}">${p.product_type==='preorder'?'預購':'現貨'}</span></td>
-      <td>NT$${(p.price||0).toLocaleString()}</td>
-      <td><span class="badge ${p.is_active?'badge-active':'badge-inactive'}">${p.is_active?'上架':'下架'}</span></td>
-      <td>
-        <button class="btn-sm btn-edit" onclick="editProduct(${p.id})">編輯</button>
-        <button class="btn-sm btn-delete" onclick="deleteProduct(${p.id})">刪除</button>
-      </td>
-    </tr>`;
-  }).join('');
+  try {
+    const url = id ? CONFIG.API_URL+'/api/admin/products/'+id : CONFIG.API_URL+'/api/admin/products';
+    await fetch(url, { method: id ? 'PUT' : 'POST', headers: adminHeaders, body: JSON.stringify(body) });
+    closeDrawer();
+    loadProducts();
+  } catch(e) {
+    alert('儲存失敗，請重試');
+  } finally {
+    btn.textContent = '儲存商品';
+    btn.disabled = false;
+  }
 }
 
-initProductPage();
+// ===== 初始化 =====
+loadProducts();
 </script>
 </body>
 </html>
