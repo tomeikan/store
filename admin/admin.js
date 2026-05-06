@@ -1,4 +1,8 @@
-// ===== Categories =====
+// ===== 共用：Token =====
+const adminToken = localStorage.getItem('admin_token') || '';
+const adminHeaders = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken };
+
+// ===== 共用：分類 =====
 let categories = JSON.parse(localStorage.getItem('shop_categories') || '[]');
 if (!categories.length) {
   categories = [
@@ -22,7 +26,7 @@ function renderCategorySelects() {
 }
 
 function updateSubcategory() {
-  const cat = document.getElementById('f-category').value;
+  const cat = document.getElementById('f-category') ? document.getElementById('f-category').value : '';
   const sub = document.getElementById('f-subcategory');
   if (!sub) return;
   sub.innerHTML = '<option value="">選擇子分類</option>';
@@ -75,7 +79,7 @@ function saveSub(ci,si) { categories[ci].subs[si]=document.getElementById('si-'+
 function deleteSub(ci,si) { categories[ci].subs.splice(si,1); saveCategories(); renderCategoryList(); renderCategorySelects(); }
 function addSub(ci) { const v=document.getElementById('newsub-'+ci).value.trim(); if(!v) return; categories[ci].subs.push(v); saveCategories(); renderCategoryList(); renderCategorySelects(); }
 
-// ===== Specs =====
+// ===== 共用：規格 =====
 let specs = [];
 function addSpec(main='', sub='') { specs.push({id:Date.now(),main,sub}); renderSpecs(); }
 function removeSpec(id) { specs=specs.filter(s=>s.id!==id); renderSpecs(); }
@@ -91,7 +95,7 @@ function renderSpecs() {
 }
 function updateSpec(id, field, val) { const s=specs.find(x=>x.id===id); if(s) s[field]=val; }
 
-// ===== Radio =====
+// ===== 共用：Radio =====
 function setRadio(field, val, el, color='blue') {
   document.getElementById('f-'+field).value = val;
   el.parentElement.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active','active-green'));
@@ -99,7 +103,7 @@ function setRadio(field, val, el, color='blue') {
   if (color === 'green') el.classList.add('active-green');
 }
 
-// ===== Date Selects =====
+// ===== 共用：日期選單 =====
 function initDateSelects() {
   const yEl = document.getElementById('f-arrive-year');
   const mEl = document.getElementById('f-arrive-month');
@@ -111,142 +115,10 @@ function initDateSelects() {
   for (let m = 1; m <= 12; m++) mEl.innerHTML += `<option value="${m}">${m} 月</option>`;
 }
 
-// ===== Drawer =====
+// ===== 共用：關閉抽屜 =====
 function closeDrawer() {
-  document.getElementById('drawer').classList.remove('open');
-  document.getElementById('drawer-overlay').classList.remove('open');
-}
-
-// ===== Product Page =====
-const adminToken = localStorage.getItem('admin_token') || '';
-const adminHeaders = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken };
-let products = [];
-
-function initProductPage() {
-  initDateSelects();
-  loadProducts();
-}
-
-async function loadProducts() {
-  try {
-    const res = await fetch(CONFIG.API_URL + '/api/admin/products', { headers: adminHeaders });
-    products = await res.json();
-    renderProducts(products);
-    const cnt = document.getElementById('product-count');
-    if (cnt) cnt.textContent = '共 ' + products.length + ' 件商品';
-  } catch(e) {
-    const tb = document.getElementById('products-tbody');
-    if (tb) tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:32px;">載入失敗</td></tr>';
-  }
-}
-
-function renderProducts(list) {
-  const tb = document.getElementById('products-tbody');
-  if (!tb) return;
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:32px;">目前沒有商品</td></tr>'; return; }
-  tb.innerHTML = list.map(p => `
-    <tr>
-      <td style="font-size:28px;">${p.emoji||'📦'}</td>
-      <td style="font-weight:500;">${p.name}</td>
-      <td style="color:#888;">${p.category||'-'}${p.subcategory?'/'+p.subcategory:''}</td>
-      <td><span class="badge ${p.product_type==='preorder'?'badge-preorder':'badge-instock'}">${p.product_type==='preorder'?'預購':'現貨'}</span></td>
-      <td>NT$${(p.price||0).toLocaleString()}</td>
-      <td><span class="badge ${p.is_active?'badge-active':'badge-inactive'}">${p.is_active?'上架':'下架'}</span></td>
-      <td>
-        <button class="btn-sm btn-edit" onclick="editProduct(${p.id})">編輯</button>
-        <button class="btn-sm btn-delete" onclick="deleteProduct(${p.id})">刪除</button>
-      </td>
-    </tr>`).join('');
-}
-
-function filterTable(q) { renderProducts(products.filter(p => p.name.toLowerCase().includes(q.toLowerCase()))); }
-
-function openDrawer(p=null) {
-  document.getElementById('drawer-title').textContent = p ? '編輯商品' : '新增商品';
-  document.getElementById('f-id').value = p ? p.id : '';
-  document.getElementById('f-emoji').value = p ? p.emoji||'' : '';
-  document.getElementById('f-name').value = p ? p.name : '';
-  document.getElementById('f-price').value = p ? p.price : '';
-  document.getElementById('f-original').value = p ? p.original_price||'' : '';
-  document.getElementById('f-deposit').value = p ? p.deposit||'' : '';
-  document.getElementById('f-cost').value = p ? p.cost||'' : '';
-  document.getElementById('f-supplier').value = p ? p.supplier||'' : '';
-  document.getElementById('f-deadline').value = p ? p.deadline||'' : '';
-  document.getElementById('f-desc').value = p ? p.description||'' : '';
-  document.getElementById('f-type').value = p ? p.product_type||'preorder' : 'preorder';
-  document.getElementById('f-status').value = p ? (p.is_active?'active':'inactive') : 'active';
-  document.getElementById('f-sale').value = p ? String(p.is_sale) : 'false';
-  specs = p && p.specs ? JSON.parse(p.specs) : [];
-  renderSpecs();
-  renderCategoryList();
-  renderCategorySelects();
-  if (p) {
-    document.getElementById('f-category').value = p.category||'';
-    updateSubcategory();
-    if (p.subcategory) setTimeout(() => document.getElementById('f-subcategory').value = p.subcategory, 50);
-    if (p.arrive_year) document.getElementById('f-arrive-year').value = p.arrive_year;
-    if (p.arrive_month) document.getElementById('f-arrive-month').value = p.arrive_month;
-  }
-  // Reset radios
-  const typeGroup = document.getElementById('type-group');
-  const statusGroup = document.getElementById('status-group');
-  const saleGroup = document.getElementById('sale-group');
-  if (typeGroup) {
-    typeGroup.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active','active-green'));
-    const typeVal = document.getElementById('f-type').value;
-    const typeBtn = typeGroup.querySelector(`.radio-btn:${typeVal==='preorder'?'first':'last'}-child`);
-    if (typeBtn) typeBtn.classList.add('active');
-  }
-  if (statusGroup) {
-    statusGroup.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active','active-green'));
-    const statusVal = document.getElementById('f-status').value;
-    const statusBtn = statusGroup.querySelector(`.radio-btn:${statusVal==='active'?'first':'last'}-child`);
-    if (statusBtn) statusBtn.classList.add('active','active-green');
-  }
-  document.getElementById('drawer').classList.add('open');
-  document.getElementById('drawer-overlay').classList.add('open');
-}
-
-function editProduct(id) { openDrawer(products.find(p => p.id === id)); }
-
-async function deleteProduct(id) {
-  if (!confirm('確定要刪除這個商品？')) return;
-  await fetch(CONFIG.API_URL + '/api/admin/products/' + id, { method: 'DELETE', headers: adminHeaders });
-  loadProducts();
-}
-
-async function saveProduct() {
-  const emoji = document.getElementById('f-emoji').value.trim();
-  const name = document.getElementById('f-name').value.trim();
-  const price = document.getElementById('f-price').value;
-  const desc = document.getElementById('f-desc').value.trim();
-  const category = document.getElementById('f-category').value;
-  const type = document.getElementById('f-type').value;
-  const status = document.getElementById('f-status').value;
-  if (!emoji||!name||!price||!desc||!category||!type||!status) {
-    alert('請填寫所有必填欄位（標 * 的欄位）');
-    return;
-  }
-  const id = document.getElementById('f-id').value;
-  const body = {
-    emoji, name, category,
-    subcategory: document.getElementById('f-subcategory').value,
-    product_type: type,
-    is_active: status === 'active',
-    price: Number(price),
-    original_price: Number(document.getElementById('f-original').value)||null,
-    deposit: Number(document.getElementById('f-deposit').value)||null,
-    cost: Number(document.getElementById('f-cost').value)||null,
-    supplier: document.getElementById('f-supplier').value,
-    arrive_year: document.getElementById('f-arrive-year').value,
-    arrive_month: document.getElementById('f-arrive-month').value,
-    deadline: document.getElementById('f-deadline').value,
-    description: desc,
-    is_sale: document.getElementById('f-sale').value === 'true',
-    specs: JSON.stringify(specs),
-  };
-  const url = id ? CONFIG.API_URL+'/api/admin/products/'+id : CONFIG.API_URL+'/api/admin/products';
-  await fetch(url, { method: id?'PUT':'POST', headers: adminHeaders, body: JSON.stringify(body) });
-  closeDrawer();
-  loadProducts();
+  const d = document.getElementById('drawer');
+  const o = document.getElementById('drawer-overlay');
+  if (d) d.classList.remove('open');
+  if (o) o.classList.remove('open');
 }
